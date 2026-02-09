@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code マスターチュートリアル</title>
+<style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --bg-card: #1c2128;
+  --border: #30363d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --accent: #58a6ff;
+  --accent-hover: #79c0ff;
+  --green: #3fb950;
+  --green-bg: rgba(63,185,80,.12);
+  --orange: #d29922;
+  --orange-bg: rgba(210,153,34,.12);
+  --purple: #bc8cff;
+  --purple-bg: rgba(188,140,255,.12);
+  --red: #f85149;
+  --code-bg: #0d1117;
+  --sidebar-w: 300px;
+  --header-h: 56px;
+}
+html { font-size: 15px; scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+/* ===== Header ===== */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: var(--header-h);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px;
+  gap: 16px;
+}
+.header-logo {
+  font-size: 1.15rem; font-weight: 700; white-space: nowrap;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.header-progress-wrap {
+  flex: 1; max-width: 400px; display: flex; align-items: center; gap: 10px;
+}
+.header-progress-bar {
+  flex: 1; height: 6px; background: var(--bg-tertiary);
+  border-radius: 3px; overflow: hidden;
+}
+.header-progress-fill {
+  height: 100%; width: 0%; background: linear-gradient(90deg, var(--green), var(--accent));
+  border-radius: 3px; transition: width .4s ease;
+}
+.header-progress-text { font-size: .8rem; color: var(--text-secondary); white-space: nowrap; }
+.hamburger {
+  display: none; background: none; border: none; color: var(--text-primary);
+  font-size: 1.5rem; cursor: pointer; padding: 4px;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+  position: fixed; top: var(--header-h); left: 0; bottom: 0;
+  width: var(--sidebar-w); background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  overflow-y: auto; z-index: 90;
+  padding: 16px 0;
+  transition: transform .3s ease;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0; z-index: 85;
+  background: rgba(0,0,0,.5);
+}
+.level-group { margin-bottom: 8px; }
+.level-label {
+  padding: 8px 20px 4px; font-size: .7rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-muted);
+}
+.level-label.level-1 { color: var(--green); }
+.level-label.level-2 { color: var(--accent); }
+.level-label.level-3 { color: var(--orange); }
+.level-label.level-4 { color: var(--purple); }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 20px; cursor: pointer; font-size: .88rem;
+  color: var(--text-secondary); transition: all .15s ease;
+  border-left: 3px solid transparent;
+}
+.nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.nav-item.active {
+  background: rgba(88,166,255,.08); color: var(--accent);
+  border-left-color: var(--accent);
+}
+.nav-item .status-icon {
+  width: 18px; height: 18px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; border-radius: 50%;
+}
+.nav-item .status-icon.pending {
+  border: 2px solid var(--border);
+}
+.nav-item .status-icon.completed {
+  background: var(--green); color: #fff; font-size: .65rem;
+}
+.nav-item .chapter-num {
+  font-size: .7rem; color: var(--text-muted); min-width: 18px;
+}
+
+/* ===== Main ===== */
+.main {
+  margin-left: var(--sidebar-w); margin-top: var(--header-h);
+  min-height: calc(100vh - var(--header-h));
+  padding: 40px 48px 80px;
+  max-width: 900px;
+}
+.chapter { display: none; }
+.chapter.active { display: block; }
+
+/* Headings */
+.chapter h1 {
+  font-size: 2rem; font-weight: 700; margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--text-primary), var(--accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.chapter-meta {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 28px;
+  font-size: .82rem; color: var(--text-muted);
+}
+.chapter-meta .badge {
+  padding: 2px 10px; border-radius: 12px; font-size: .72rem; font-weight: 600;
+}
+.badge-beginner { background: var(--green-bg); color: var(--green); }
+.badge-intermediate { background: rgba(88,166,255,.12); color: var(--accent); }
+.badge-advanced { background: var(--orange-bg); color: var(--orange); }
+.badge-expert { background: var(--purple-bg); color: var(--purple); }
+.chapter h2 {
+  font-size: 1.35rem; font-weight: 600; margin: 32px 0 14px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.chapter h3 { font-size: 1.1rem; font-weight: 600; margin: 24px 0 10px; }
+
+/* Paragraphs & lists */
+.chapter p { margin-bottom: 14px; color: var(--text-secondary); }
+.chapter ul, .chapter ol { margin: 0 0 16px 24px; color: var(--text-secondary); }
+.chapter li { margin-bottom: 6px; }
+.chapter strong { color: var(--text-primary); }
+
+/* Learning objectives */
+.objectives {
+  background: rgba(88,166,255,.06);
+  border: 1px solid rgba(88,166,255,.2);
+  border-radius: 8px; padding: 18px 22px; margin-bottom: 28px;
+}
+.objectives-title {
+  font-size: .82rem; font-weight: 700; color: var(--accent);
+  text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px;
+}
+.objectives ul { list-style: none; margin: 0; padding: 0; }
+.objectives li { position: relative; padding-left: 22px; margin-bottom: 6px; color: var(--text-secondary); }
+.objectives li::before {
+  content: "🎯"; position: absolute; left: 0; top: 0; font-size: .85rem;
+}
+
+/* Code blocks */
+.code-block {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 8px; margin: 16px 0; overflow: hidden;
+}
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 14px; background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+  font-size: .75rem; color: var(--text-muted);
+}
+.code-copy {
+  background: none; border: 1px solid var(--border); color: var(--text-secondary);
+  padding: 2px 10px; border-radius: 4px; cursor: pointer; font-size: .72rem;
+  transition: all .15s;
+}
+.code-copy:hover { border-color: var(--accent); color: var(--accent); }
+.code-block pre {
+  padding: 16px; overflow-x: auto; font-size: .85rem;
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  line-height: 1.6;
+}
+.code-block code { color: var(--text-primary); }
+.code-inline {
+  background: var(--bg-tertiary); padding: 2px 7px; border-radius: 4px;
+  font-family: "SF Mono", "Fira Code", monospace; font-size: .85em;
+  color: var(--accent);
+}
+
+/* Terminal simulation */
+.terminal {
+  background: #000; border: 1px solid var(--border); border-radius: 8px;
+  margin: 16px 0; overflow: hidden;
+}
+.terminal-header {
+  background: var(--bg-tertiary); padding: 8px 14px;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.terminal-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.terminal-dot.red { background: #ff5f57; }
+.terminal-dot.yellow { background: #febc2e; }
+.terminal-dot.green { background: #28c840; }
+.terminal-title { font-size: .72rem; color: var(--text-muted); margin-left: 8px; }
+.terminal pre {
+  padding: 16px; font-size: .83rem; color: #4af626;
+  font-family: "SF Mono", "Fira Code", monospace;
+  line-height: 1.6; overflow-x: auto;
+}
+.terminal .prompt { color: var(--accent); }
+.terminal .output { color: #ccc; }
+.terminal .comment { color: #6a737d; }
+
+/* Info / Tip / Warning boxes */
+.info-box {
+  border-radius: 8px; padding: 16px 20px; margin: 18px 0;
+  border-left: 4px solid;
+}
+.info-box.tip { background: var(--green-bg); border-color: var(--green); }
+.info-box.warning { background: var(--orange-bg); border-color: var(--orange); }
+.info-box.info { background: rgba(88,166,255,.08); border-color: var(--accent); }
+.info-box-title {
+  font-weight: 700; font-size: .85rem; margin-bottom: 6px;
+}
+.info-box.tip .info-box-title { color: var(--green); }
+.info-box.warning .info-box-title { color: var(--orange); }
+.info-box.info .info-box-title { color: var(--accent); }
+.info-box p { margin-bottom: 6px; font-size: .9rem; }
+.info-box p:last-child { margin-bottom: 0; }
+
+/* Hands-on exercise */
+.exercise {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 22px; margin: 24px 0;
+}
+.exercise-title {
+  font-size: .95rem; font-weight: 700; color: var(--orange);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.exercise ol { margin-left: 20px; }
+.exercise li { margin-bottom: 8px; color: var(--text-secondary); }
+
+/* Checklist */
+.checklist {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 22px; margin: 24px 0;
+}
+.checklist-title {
+  font-size: .95rem; font-weight: 700; color: var(--green);
+  margin-bottom: 14px;
+}
+.checklist label {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 6px 0; cursor: pointer; color: var(--text-secondary);
+  font-size: .9rem;
+}
+.checklist input[type="checkbox"] {
+  margin-top: 4px; accent-color: var(--green);
+  width: 16px; height: 16px; flex-shrink: 0;
+}
+.checklist label:has(input:checked) { color: var(--text-muted); text-decoration: line-through; }
+
+/* Complete button */
+.complete-section {
+  margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.btn-complete {
+  padding: 10px 28px; border: none; border-radius: 8px;
+  font-size: .95rem; font-weight: 600; cursor: pointer;
+  background: linear-gradient(135deg, var(--green), #2ea043);
+  color: #fff; transition: all .2s ease;
+}
+.btn-complete:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(63,185,80,.3); }
+.btn-complete:disabled {
+  background: var(--bg-tertiary); color: var(--text-muted);
+  cursor: default; transform: none; box-shadow: none;
+}
+.btn-complete.completed {
+  background: var(--bg-tertiary); color: var(--green);
+}
+.btn-next {
+  padding: 10px 24px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-tertiary); color: var(--text-primary);
+  font-size: .9rem; cursor: pointer; transition: all .15s;
+}
+.btn-next:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Navigation footer */
+.chapter-nav {
+  display: flex; justify-content: space-between; margin-top: 32px;
+  padding-top: 20px; border-top: 1px solid var(--border);
+}
+.chapter-nav button {
+  padding: 8px 20px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg-secondary); color: var(--text-secondary);
+  cursor: pointer; font-size: .85rem; transition: all .15s;
+}
+.chapter-nav button:hover { border-color: var(--accent); color: var(--accent); }
+.chapter-nav button:disabled { opacity: .3; cursor: default; }
+
+/* Table */
+.chapter table {
+  width: 100%; border-collapse: collapse; margin: 16px 0;
+  font-size: .88rem;
+}
+.chapter th, .chapter td {
+  padding: 10px 14px; border: 1px solid var(--border); text-align: left;
+}
+.chapter th { background: var(--bg-tertiary); font-weight: 600; color: var(--text-primary); }
+.chapter td { color: var(--text-secondary); }
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .main { margin-left: 0; padding: 24px 18px 60px; }
+  .hamburger { display: block; }
+  .header-logo { font-size: 1rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="メニュー">☰</button>
+  <div class="header-logo">Claude Code マスターチュートリアル</div>
+  <div class="header-progress-wrap">
+    <div class="header-progress-bar"><div class="header-progress-fill" id="progressFill"></div></div>
+    <span class="header-progress-text" id="progressText">0 / 12 完了</span>
+  </div>
+</header>
+
+<!-- Sidebar -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+<nav class="sidebar" id="sidebar">
+  <!-- generated by JS -->
+</nav>
+
+<!-- Main -->
+<main class="main" id="mainContent">
+  <!-- chapters generated by JS -->
+</main>
+
+<script>
+// ===== Tutorial Data =====
+const chapters = [
+  // ===== Level 1: 基礎編 =====
+  {
+    id: 1, level: 1, levelName: "基礎編",
+    title: "はじめに",
+    badge: "beginner", badgeLabel: "入門",
+    readTime: "10分",
+    objectives: [
+      "Claude Code が何かを理解する",
+      "インストールと初回起動を完了する",
+      "最初のプロンプトを実行する"
+    ],
+    content: `
+<h2>Claude Code とは</h2>
+<p>Claude Code は、Anthropic が提供するターミナルベースの AI コーディングアシスタントです。IDE の拡張機能とは異なり、ターミナルで直接動作し、ファイルの読み書き、Git 操作、コマンド実行などを自律的に行えます。</p>
+
+<div class="info-box info">
+<div class="info-box-title">ポイント</div>
+<p>Claude Code はエディタに依存しません。VS Code、Vim、Emacs、どんなエディタを使っていても、ターミナルから Claude Code を呼び出して作業できます。</p>
+</div>
+
+<h2>インストール</h2>
+<p>Claude Code は npm パッケージとして提供されています。Node.js 18 以上が必要です。</p>
+
+<div class="terminal">
+<div class="terminal-header">
+  <span class="terminal-dot red"></span>
+  <span class="terminal-dot yellow"></span>
+  <span class="terminal-dot green"></span>
+  <span class="terminal-title">Terminal</span>
+</div>
+<pre><span class="prompt">$</span> npm install -g @anthropic-ai/claude-code
+
+<span class="comment"># インストール確認</span>
+<span class="prompt">$</span> claude --version
+<span class="output">Claude Code v1.x.x</span></pre>
+</div>
+
+<h2>初回起動</h2>
+<p>インストール後、任意のプロジェクトディレクトリで <span class="code-inline">claude</span> と入力するだけで起動します。</p>
+
+<div class="terminal">
+<div class="terminal-header">
+  <span class="terminal-dot red"></span>
+  <span class="terminal-dot yellow"></span>
+  <span class="terminal-dot green"></span>
+  <span class="terminal-title">Terminal</span>
+</div>
+<pre><span class="prompt">$</span> cd my-project
+<span class="prompt">$</span> claude
+
+<span class="output">╭──────────────────────────────────────╮
+│  Claude Code                         │
+│  Type your request to get started.   │
+╰──────────────────────────────────────╯</span>
+
+<span class="prompt">></span> <span class="output">このプロジェクトの構成を説明してください</span></pre>
+</div>
+
+<p>初回起動時に認証が求められます。Anthropic のアカウントで認証を完了してください。</p>
+
+<h2>動作の仕組み</h2>
+<p>Claude Code は以下のような流れで動作します：</p>
+<ol>
+  <li>ユーザーがプロンプト（指示）を入力する</li>
+  <li>Claude Code がプロジェクトのコンテキストを分析する</li>
+  <li>必要に応じてファイルの読み書き、コマンド実行などのツールを使用する</li>
+  <li>結果をユーザーに返す</li>
+</ol>
+
+<div class="info-box tip">
+<div class="info-box-title">ヒント</div>
+<p>Claude Code はプロジェクトのルートディレクトリで起動するのがベストです。<span class="code-inline">.git</span> ディレクトリを認識し、プロジェクト全体のコンテキストを把握します。</p>
+</div>
+    `,
+    exercise: {
+      title: "🔧 ハンズオン: 初回起動",
+      steps: [
+        "ターミナルを開き、任意のプロジェクトディレクトリに移動する",
+        "<code class='code-inline'>claude</code> と入力して Claude Code を起動する",
+        "「このプロジェクトの構成を説明してください」と入力して応答を確認する",
+        "<code class='code-inline'>Ctrl+C</code> で終了する"
+      ]
+    },
+    checklist: [
+      "Claude Code をインストールできた",
+      "Claude Code を起動して認証を完了した",
+      "最初のプロンプトを送信して応答を受け取った"
+    ]
+  },
+  {
+    id: 2, level: 1, levelName: "基礎編",
+    title: "基本操作",
+    badge: "beginner", badgeLabel: "入門",
+    readTime: "15分",
+    objectives: [
+      "効果的なプロンプトの書き方を習得する",
+      "コンテキストの渡し方を理解する",
+      "会話の管理方法を学ぶ"
+    ],
+    content: `
+<h2>効果的なプロンプトの書き方</h2>
+<p>Claude Code に指示を出す際、明確で具体的なプロンプトを書くことが重要です。</p>
+
+<h3>悪い例と良い例</h3>
+<table>
+  <tr><th>❌ 悪い例</th><th>✅ 良い例</th></tr>
+  <tr><td>バグを直して</td><td>login.ts の handleSubmit 関数で、パスワードが空の場合にエラーが表示されないバグを修正して</td></tr>
+  <tr><td>テストを書いて</td><td>UserService クラスの createUser メソッドに対して、正常系と異常系（重複メール）のユニットテストを追加して</td></tr>
+  <tr><td>リファクタリングして</td><td>api/routes.ts のルーティング定義を、機能ごとに別ファイルに分割して</td></tr>
+</table>
+
+<h2>コンテキストの渡し方</h2>
+<p>Claude Code にコンテキストを渡す方法はいくつかあります。</p>
+
+<h3>1. 直接ファイルを指定する</h3>
+<div class="code-block">
+<div class="code-header"><span>プロンプト例</span></div>
+<pre><code>src/utils/auth.ts を読んで、セキュリティ上の問題点を指摘して</code></pre>
+</div>
+
+<h3>2. パイプで入力する</h3>
+<div class="terminal">
+<div class="terminal-header">
+  <span class="terminal-dot red"></span>
+  <span class="terminal-dot yellow"></span>
+  <span class="terminal-dot green"></span>
+  <span class="terminal-title">Terminal</span>
+</div>
+<pre><span class="prompt">$</span> cat error.log | claude "このエラーログを分析して原因を特定して"
+
+<span class="prompt">$</span> git diff | claude "この差分をレビューして"</pre>
+</div>
+
+<h3>3. ワンショットモード</h3>
+<p>対話セッションを開始せずに、単発でコマンドを実行できます。</p>
+<div class="terminal">
+<div class="terminal-header">
+  <span class="terminal-dot red"></span>
+  <span class="terminal-dot yellow"></span>
+  <span class="terminal-dot green"></span>
+  <span class="terminal-title">Terminal</span>
+</div>
+<pre><span class="prompt">$</span> claude -p "package.json の依存関係を確認して、セキュリティアップデートが必要なパッケージを教えて"</pre>
+</div>
+
+<h2>会話の続け方</h2>
+<p>Claude Code は会話の文脈を維持します。前の指示に基づいて追加の指示を出せます。</p>
+
+<div class="code-block">
+<div class="code-header"><span>会話の例</span></div>
+<pre><code><span style="color:var(--accent)">></span> src/components/Header.tsx のコードを説明して
+
+<span style="color:var(--text-muted)">[Claude が Header コンポーネントを説明]</span>
+
+<span style="color:var(--accent)">></span> そこにダークモードの切り替えボタンを追加して
+
+<span style="color:var(--text-muted)">[Claude が前の文脈を理解して Header を修正]</span></code></pre>
+</div>
+
+<div class="info-box tip">
+<div class="info-box-title">ヒント</div>
+<p>会話が長くなってきたら <span class="code-inline">/clear</span> で会話をリセットできます。コンテキストウィンドウには限りがあるため、トピックが変わったらリセットすると良いでしょう。</p>
+</div>
+    `,
+    exercise: {
+      title: "🔧 ハンズオン: プロンプトの練習",
+      steps: [
+        "プロジェクトディレクトリで Claude Code を起動する",
+        "「このプロジェクトで使われているフレームワークとライブラリを一覧にして」と入力する",
+        "応答を受けたら、「その中で最もバージョンが古いものを教えて」と続けて質問する",
+        "パイプを使って <code class='code-inline'>git log --oneline -10 | claude \"最近のコミットの傾向を分析して\"</code> を試す"
+      ]
+    },
+    checklist: [
+      "具体的なプロンプトを書けるようになった",
+      "ファイル指定やパイプによるコンテキストの渡し方を理解した",
+      "会話の文脈を活用した連続的な指示の出し方を習得した"
+    ]
+  },
+  {
+    id: 3, level: 1, levelName: "基礎編",
+    title: "ファイル操作",
+    badge: "beginner", badgeLabel: "入門",
+    readTime: "12分",
+    objectives: [
+      "Claude Code のファイル読み込み機能を理解する",
+      "コードベースの効率的な探索方法を学ぶ",
+      "検索機能を活用できるようになる"
+    ],
+    content: `
+<h2>ファイルの読み込み</h2>
+<p>Claude Code は指示に応じて自動的にファイルを読み込みます。明示的にファイルを指定することも可能です。</p>
+
+<div class="code-block">
+<div class="code-header"><span>プロンプト例</span></div>
+<pre><code>> src/index.ts を読んで概要を説明して
+
+> package.json と tsconfig.json の設定を確認して</code></pre>
+</div>
+
+<h2>コードベースの探索</h2>
+<p>Claude Code はプロジェクト全体を把握する能力を持っています。以下のような質問で、コードベースを効率的に探索できます。</p>
+
+<div class="code-block">
+<div class="code-header"><span>探索のプロンプト例</span></div>
+<pre><code>> 認証に関連するファイルをすべて見つけて
+
+> UserService クラスの定義と、それを使っている箇所を教えて
+
+> API エンドポイントの一覧を作成して
+
+> このプロジェクトのディレクトリ構造を説明して</code></pre>
+</div>
+
+<h2>Claude Code が使うツール</h2>
+<p>Claude Code は内部的に以下のようなツールを使ってファイル操作を行います：</p>
+
+<table>
+  <tr><th>ツール</th><th>用途</th><th>例</th></tr>
+  <tr><td><strong>Read</strong></td><td>ファイルの読み込み</td><td>特定のファイルの内容を確認</td></tr>
+  <tr><td><strong>Glob</strong></td><td>パターンによるファイル検索</td><td><code class="code-inline">**/*.test.ts</code> でテストファイルを検索</td></tr>
+  <tr><td><strong>Grep</strong></td><td>テキスト検索</td><td>特定の関数名やキーワードを全ファイルから検索</td></tr>
+  <tr><td><strong>Bash</strong></td><td>コマンド実行</td><td><code class="code-inline">ls</code>, <code class="code-inline">find</code> などのシェルコマンド</td></tr>
+</table>
+
+<div class="info-box info">
+<div class="info-box-title">ツールの承認</div>
+<p>Claude Code がファイルを読み込んだりコマンドを実行する際、権限モードの設定によっては承認を求められます。内容を確認してから承認しましょう。</p>
+</div>
+
+<h2>大規模コードベースでの探索</h2>
+<p>大きなプロジェクトでは、段階的に探索するのが効果的です。</p>
+
+<div class="code-block">
+<div class="code-header"><span>段階的な探索の例</span></div>
+<pre><code><span style="color:var(--accent)">></span> まずプロジェクトのディレクトリ構造を見せて
+
+<span style="color:var(--text-muted)">[Claude がディレクトリ構造を表示]</span>
+
+<span style="color:var(--accent)">></span> src/services/ の中身を詳しく見て、各サービスの役割を説明して
+
+<span style="color:var(--text-muted)">[Claude が各サービスファイルを読んで説明]</span>
+
+<span style="color:var(--accent)">></span> その中で DatabaseService の接続処理を詳しく見せて</code></pre>
+</div>
+
+<div class="info-box tip">
+<div class="info-box-title">ヒント</div>
+<p>「～を探して」「～に関連するファイルを見つけて」のように指示すると、Claude Code が自動的に Glob や Grep を使って検索してくれます。</p>
+</div>
+    `,
+    exercise: {
+      title: "🔧 ハンズオン: コードベース探索",
+      steps: [
+        "プロジェクトで Claude Code を起動する",
+        "「このプロジェクトのディレクトリ構造を教えて」と聞く",
+        "「テストファイルをすべて見つけて、テストカバレッジの概況を教えて」と指示する",
+        "特定のキーワード（例：TODO, FIXME）を含むファイルを検索させる"
+      ]
+    },
+    checklist: [
+      "ファイル指定による読み込みを行えた",
+      "コードベース全体の探索を Claude Code に依頼できた",
+      "Glob や Grep などの内部ツールの動作を理解した"
+    ]
+  },
+
+  // ===== Level 2: 実践編 =====
+  {
+    id: 4, level: 2, levelName: "実践編",
+    title: "コード編集",
+    badge: "intermediate", badgeLabel: "中級",
+    readTime: "18分",
+    objectives: [
+      "Claude Code によるコード生成のパターンを理解する",
+      "既存コードの編集・リファクタリングを依頼できる",
+      "Edit ツールの動作を理解する"
+    ],
+    content: `
+<h2>コードの生成</h2>
+<p>Claude Code は新しいコードの生成、既存コードの修正、リファクタリングなど、幅広いコード編集タスクを実行できます。</p>
+
+<div class="code-block">
+<div class="code-header"><span>コード生成のプロンプト例</span></div>
+<pre><code>> Express で REST API のユーザー CRUD エンドポイントを作成して。
+  バリデーション、エラーハンドリング、TypeScript の型定義も含めて。
+
+> React で検索フォームコンポーネントを作って。
+  デバウンス付きで、ローディング状態も表示して。</code></pre>
+</div>
+
+<h2>コードの編集</h2>
+<p>Claude Code は既存のコードに対して、ピンポイントな修正を行えます。内部的には <strong>Edit ツール</strong> を使って、指定した箇所だけを正確に書き換えます。</p>
+
+<div class="code-block">
+<div class="code-header"><span>編集のプロンプト例</span></div>
+<pre><code>> handleLogin 関数にレートリミットのチェックを追加して
+
+> UserCard コンポーネントに loading プロップを追加して、
+  ローディング中はスケルトン UI を表示するようにして
+
+> この関数のエラーハンドリングを改善して。
+  具体的なエラーメッセージを返すようにして。</code></pre>
+</div>
+
+<h2>リファクタリング</h2>
+<p>Claude Code は複雑なリファクタリングにも対応します。</p>
+
+<div class="code-block">
+<div class="code-header"><span>リファクタリングの例</span></div>
+<pre><code>> このコールバック地獄を async/await に書き換えて
+
+> UserService クラスが大きすぎるので、認証関連の処理を
+  AuthService として切り出して
+
+> この JavaScript ファイルを TypeScript に変換して。
+  適切な型定義も追加して。</code></pre>
+</div>
+
+<h2>Edit ツールの仕組み</h2>
+<p>Claude Code がファイルを編集する際、以下のような流れで処理されます：</p>
+<ol>
+  <li>まず <strong>Read ツール</strong> でファイルの現在の内容を読み込む</li>
+  <li><strong>Edit ツール</strong> で変更箇所を <code class="code-inline">old_string</code> → <code class="code-inline">new_string</code> の形式で指定する</li>
+  <li>変更内容がユーザーに diff 形式で表示される</li>
+  <li>ユーザーが承認すると変更が反映される</li>
+</ol>
+
+<div class="info-box warning">
+<div class="info-box-title">注意</div>
+<p>Claude Code は変更前にファイルを必ず読み込みます。読んでいないファイルに対して編集を行うことはありません。また、変更は差分（diff）として表示されるため、何が変わるのか確認してから承認しましょう。</p>
+</div>
+
+<div class="info-box tip">
+<div class="info-box-title">ヒント</div>
+<p>大規模な変更を依頼するときは、まず方針を相談してから実行するのがおすすめです。「まず計画を教えて」と言うと、変更内容の概要を先に説明してくれます。</p>
+</div>
+    `,
+    exercise: {
+      title: "🔧 ハンズオン: コード編集の実践",
+      steps: [
+        "プロジェクト内の任意のファイルに対して「この関数を説明して」と聞く",
+        "説明を受けた後、「コメントを追加して」と依頼する",
+        "別の関数に対して「この関数をリファクタリングして」と依頼する",
+        "表示される diff を確認し、承認する"
+      ]
+    },
+    checklist: [
+      "Claude Code にコードを生成させることができた",
+      "既存コードへのピンポイントな編集を依頼できた",
+      "Edit ツールの動作（Read → Edit → 承認）の流れを理解した"
+    ]
+  },
+  {
+    id: 5, level: 2, levelName: "実践編",
+    title: "ターミナル操作",
+    badge: "intermediate", badgeLabel: "中級",
+    readTime: "14分",
+    objectives: [
+      "Claude Code 経由でコマンドを実行する方法を理解する",
+      "テストの実行とデバッグの依頼方法を学ぶ",
+      "ビルドやリント実行のワークフローを習得する"
+    ],
+    content: `
+<h2>Bash ツール</h2>
+<p>Claude Code はターミナルコマンドを実行する <strong>Bash ツール</strong> を持っています。テスト実行、ビルド、パッケージ管理など、様々な操作をチャット内から実行できます。</p>
+
+<div class="code-block">
+<div class="code-header"><span>コマンド実行のプロンプト例</span></div>
+<pre><code>> テストを実行して
+
+> npm run build を実行してエラーがあれば修正して
+
+> ESLint を実行して、警告をすべて修正して</code></pre>
+</div>
+
+<h2>テストの実行とデバッグ</h2>
+<p>Claude Code の強力な使い方の一つが、テスト駆動での開発です。</p>
+
+<div class="code-block">
+<div class="code-header"><span>テスト駆動のワークフロー</span></div>
+<pre><code><span style="color:var(--accent)">></span> UserService の createUser メソッドのテストを書いて実行して
+
+<span style="color:var(--text-muted)">[Claude がテストを書いて実行 → 一部失敗]</span>
+
+<span style="color:var(--accent)">></span> 失敗したテストの原因を分析して修正して
+
+<span style="color:var(--text-muted)">[Claude が原因を分析し、コードまたはテストを修正]</span>
+
+<span style="color:var(--accent)">></span> もう一度テストを実行して全部通ることを確認して</code></pre>
+</div>
+
+<h2>コマンドの承認</h2>
+<p>Claude Code が Bash コマンドを実行する前に、ユーザーに承認を求めます。コマンドの内容を確認してから承認しましょう。</p>
+
+<div class="terminal">
+<div class="terminal-header">
+  <span class="terminal-dot red"></span>
+  <span class="terminal-dot yellow"></span>
+  <span class="terminal-dot green"></span>
+  <span class="terminal-title">Terminal</span>
+</div>
+<pre><span class="output">Claude wants to run: npm test</span>
+
+<span class="prompt">[Allow]</span> <span class="output">[Deny]</span> <span class="output">[Allow Always]</span></pre>
+</div>
+
+<div class="info-box info">
+<div class="info-box-title">権限モード</div>
+<p>権限モードは 3 段階あります：</p>
+<p><strong>Ask（デフォルト）</strong>: 毎回確認を求める</p>
+<p><strong>Auto-accept reads</strong>: 読み取り系は自動承認、書き込み・実行は確認</p>
+<p><strong>Yolo</strong>: すべて自動承認（信頼できる環境のみ推奨）</p>
+</div>
+
+<h2>ビルドとデプロイ</h2>
+<p>ビルドエラーの修正も Claude Code に依頼できます。</p>
+
+<div class="code-block">
+<div class="code-header"><span>ビルドエラーの修正</span></div>
+<pre><code>> npm run build を実行して、もしエラーがあれば修正して
+  再度ビルドして成功するまで繰り返して</code></pre>
+</div>
+
+<div class="info-box tip">
+<div class="info-box-title">ヒント</div>
+<p>「エラーがあれば修正して再実行して」のように指示すると、Claude Code はエラーを自動的に分析・修正・再実行のループを行ってくれます。</p>
+</div>
+    `,
+    exercise: {
+      title: "🔧 ハンズオン: ターミナル操作の実践",
+      steps: [
+        "Claude Code で「テストを実行して」と指示する",
+        "テスト結果を確認し、失敗があれば「失敗の原因を分析して修正して」と依頼する",
+        "「npm run build を実行してエラーがあれば修正して」と依頼する",
+        "コマンドの承認ダイアログの動作を確認する"
+      ]
+    },
+    checklist: [
+      "Claude Code 経由でコマンドを実行できた",
+      "テストの実行と結果の分析を依頼できた",
+      "権限モードの種類と動作を理解した"
+    ]
+  },
+  {
+    id: 6, level: 2, levelName: "実践編",
+    title: "Git 操作",
+    badge: "intermediate", badgeLabel: "中級",
+    readTime: "16分",
+    objectives: [
+      "Claude Code で Git 操作を行う方法を学ぶ",
+      "コミットメッセージの自動生成を活用する",
+      "PR の作成とレビューの方法を理解する"
+    ],
+    content: `
+<h2>Git コミット</h2>
+<p>Claude Code は Git 操作を強力にサポートします。変更内容を分析して適切なコミットメッセージを自動生成します。</p>
+
+<div class="code-block">
+<div class="code-header"><span>Git 操作のプロンプト例</span></div>
+<pre><code>> 変更をコミットして
+
+<span style="color:var(--text-muted)">Claude が git diff を分析し、適切なコミットメッセージを提案</span>
+
+> 機能ごとに分けてコミットして</code></pre>
+</div>
+
+<p>または、スラッシュコマンドを使えます：</p>
+<div class="terminal">
+<div class="terminal-header">
+  <span class="terminal-dot red"></span>
+  <span class="terminal-dot yellow"></span>
+  <span class="terminal-dot green"></span>
+  <span class="terminal-title">Terminal</span>
+</div>
+<pre><span class="prompt">></span> /commit</pre>
+</div>
+
+<h2>ブランチ操作</h2>
+<div class="code-block">
+<div class="code-header"><span>ブランチ操作の例</span></div>
+<pre><code>> feature/user-auth ブランチを作成して切り替えて
+
+> main ブランチとの差分を確認して
+
+> コンフリクトを解決して</code></pre>
+</div>
+
+<h2>PR（プルリクエスト）作成</h2>
+<p>Claude Code は GitHub CLI（gh）と連携して、PR の作成やレビューも行えます。</p>
+
+<div class="code-block">
+<div class="code-header"><span>PR 作成のワークフロー</span></div>
+<pre><code><span style="color:var(--accent)">></span> この変更で PR を作成して。
+  変更内容の要約と、テスト計画も含めて。
+
+<span style="color:var(--text-muted)">[Claude が変更を分析し、PR タイトル・説明を生成して gh pr create を実行]</span></code></pre>
+</div>
+
+<h2>コードレビュー</h2>
+<p>既存の PR のレビューも Claude Code に依頼できます。</p>
+
+<div class="code-block">
+<div class="code-header"><span>レビュー依頼</span></div>
+<pre><code>> gh pr diff 123 を確認して、レビューコメントをまとめて
+
+> この PR のセキュリティ面で気になる点を指摘して</code></pre>
+</div>
+
+<div class="info-box warning">
+<div class="info-box-title">注意</div>
+<p>Claude Code は安全性のため、デフォルトでは <span class="code-inline">git push --force</span> や <span class="code-inline">git reset --hard</span> などの破壊的な Git コマンドは実行しません。これらを実行する場合は明示的な指示が必要です。</p>
+</div>
+
+<div class="info-box tip">
+<div class="info-box-title">ヒント</div>
+<p>コミットメッセージのスタイルはプロジェクトの過去のコミットから自動的に学習されます。Conventional Commits を使っているプロジェクトなら、Claude Code も同じ形式で生成します。</p>
+</div>
+    `,
+    exercise: {
+      title: "🔧 ハンズオン: Git 操作の実践",
+      steps: [
+        "何かしらの変更を行った後、Claude Code で「変更をコミットして」と依頼する",
+        "生成されたコミットメッセージを確認し、必要に応じて修正を依頼する",
+        "<code class='code-inline'>/commit</code> スラッシュコマンドを試す",
+        "「最近のコミット履歴を見せて」と依頼して出力を確認する"
+      ]
+    },
+    checklist: [
+      "Claude Code でコミットを作成できた",
+      "コミットメッセージの自動生成を確認した",
+      "PR 作成の方法を理解した"
+    ]
+  },
+
+  // ===== Level 3: 応用編 =====
+  {
+    id: 7, level: 3, levelName: "応用編",
+    title: "CLAUDE.md",
+    badge: "advanced", badgeLabel: "上級",
+    readTime: "15分",
+    objectives: [
+      "CLAUDE.md の役割と仕組みを理解する",
+      "効果的な CLAUDE.md を作成できる",
+      "チームでの共有設定を活用できる"
+    ],
+    content: `
+<h2>CLAUDE.md とは</h2>
+<p><span class="code-inline">CLAUDE.md</span> は Claude Code のプロジェクトメモリです。プロジェクトのルートに配置することで、Claude Code が毎回自動的に読み込み、プロジェクト固有のコンテキストを保持します。</p>
+
+<div class="info-box info">
+<div class="info-box-title">読み込み順序</div>
+<p>CLAUDE.md は以下の場所から読み込まれます（すべてマージされます）：</p>
+<p>1. <span class="code-inline">~/.claude/CLAUDE.md</span> - グローバル（全プロジェクト共通）</p>
+<p>2. <span class="code-inline">./CLAUDE.md</span> - プロジェクトルート（チーム共有向け）</p>
+<p>3. <span class="code-inline">./.claude/CLAUDE.md</span> - プロジェクトローカル（個人設定）</p>
+</div>
+
+<h2>CLAUDE.md の書き方</h2>
+<p>効果的な CLAUDE.md にはプロジェクトのルール、慣例、頻出コマンドなどを記述します。</p>
+
+<div class="code-block">
+<div class="code-header"><span>CLAUDE.md の例</span><button class="code-copy" onclick="copyCode(this)">コピー</button></div>
+<pre><code># プロジェクト概要
+ECサイトのバックエンド API（Node.js + TypeScript + PostgreSQL）
+
+# 開発コマンド
+- テスト: npm test
+- ビルド: npm run build
+- Lint: npm run lint
+- 開発サーバー: npm run dev
+
+# コーディングルール
+- 関数は必ず TypeScript の型を付ける
+- エラーは Result 型（neverthrow）で処理する
+- テストは describe/it の構文で書く
+- コミットは Conventional Commits 形式
+
+# ディレクトリ構成
+- src/routes/ - API ルーティング
+- src/services/ - ビジネスロジック
+- src/models/ - データベースモデル
+- src/middleware/ - ミドルウェア
+
+# 注意事項
+- .env ファイルは絶対にコミットしない
+- migration は必ず可逆にする</code></pre>
+</div>
+
+<h2>/init コマンド</h2>
+<p>Claude Code の <span class="code-inline">/init</span> コマンドを使うと、プロジェクトを分析して CLAUDE.md を自動生成してくれます。</p>
+
+<div class="terminal">
+<div class="terminal-header">
+  <span class="terminal-dot red"></span>
+  <span class="terminal-dot yellow"></span>
+  <span class="terminal-dot green"></span>
+  <span class="terminal-title">Terminal</span>
+</div>
+<pre><span class="prompt">></span> /init
+
+<span class="output">Analyzing project structure...
+Generated CLAUDE.md with project context.</span></pre>
+</div>
+
+<div class="info-box tip">
+<div class="info-box-title">ヒント</div>
+<p>CLAUDE.md は簡潔に保つのがコツです。長すぎるとコンテキストウィンドウを圧迫します。重要な情報を優先的に記載しましょう。</p>
+</div>
+    `,
+    exercise: {
+      title: "🔧 ハンズオン: CLAUDE.md の作成",
+      steps: [
+        "プロジェクトルートで <code class='code-inline'>/init</code> を実行して CLAUDE.md を自動生成する",
+        "生成された CLAUDE.md を確認し、必要に応じて編集する",
+        "プロジェクト固有のルール（例：コミット規約）を追記する",
+        "Claude Code を再起動して、CLAUDE.md の内容が反映されていることを確認する"
+      ]
+    },
+    checklist: [
+      "CLAUDE.md の役割と読み込み順序を理解した",
+      "プロジェクトに適した CLAUDE.md を作成できた",
+      "/init コマンドによる自動生成を試した"
+    ]
+  },
+  {
+    id: 8, level: 3, levelName: "応用編",
+    title: "スラッシュコマンド",
+    badge: "advanced", badgeLabel: "上級",
+    readTime: "12分",
+    objectives: [
+      "主要なスラッシュコマンドを覚える",
+      "各コマンドの使いどころを理解する",
+      "ワークフローにスラッシュコマンドを組み込む"
+    ],
+    content: `
+<h2>スラッシュコマンド一覧</h2>
+<p>Claude Code にはワークフローを効率化するスラッシュコマンドが用意されています。</p>
+
+<table>
+  <tr><th>コマンド</th><th>説明</th><th>使いどころ</th></tr>
+  <tr><td><span class="code-inline">/help</span></td><td>ヘルプを表示</td><td>使い方を確認したいとき</td></tr>
+  <tr><td><span class="code-inline">/clear</span></td><td>会話をリセット</td><td>トピックを変えるとき、コンテキスト節約</td></tr>
+  <tr><td><span class="code-inline">/compact</span></td><td>会話を要約して圧縮</td><td>コンテキストが大きくなったとき</td></tr>
+  <tr><td><span class="code-inline">/init</span></td><td>CLAUDE.md を生成</td><td>新しいプロジェクトのセットアップ</td></tr>
+  <tr><td><span class="code-inline">/cost</span></td><td>トークン使用量を表示</td><td>コスト確認</td></tr>
+  <tr><td><span class="code-inline">/commit</span></td><td>コミットを作成</td><td>変更をコミットしたいとき</td></tr>
+</table>
+
+<h2>よく使うコマンドの詳細</h2>
+
+<h3>/compact - コンテキストの圧縮</h3>
+<p>会話が長くなると、コンテキストウィンドウが埋まってきます。<span class="code-inline">/compact</span> を使うと、これまでの会話を要約して圧縮し、新しい作業のための余裕を作ります。</p>
+
+<div class="terminal">
+<div class="terminal-header">
+  <span class="terminal-dot red"></span>
+  <span class="terminal-dot yellow"></span>
+  <span class="terminal-dot green"></span>
+  <span class="terminal-title">Terminal</span>
+</div>
+<pre><span class="prompt">></span> /compact
+
+<span class="output">Compacting conversation...
+Summarized 45 messages into context summary.
+Context usage: 82% → 24%</span></pre>
+</div>
+
+<h3>/clear vs /compact</h3>
+<div class="info-box info">
+<div class="info-box-title">使い分け</div>
+<p><strong>/clear</strong>: 完全にリセット。新しいタスクを始めるとき。</p>
+<p><strong>/compact</strong>: 要約して継続。同じタスクの延長で、コンテキストを節約したいとき。</p>
+</div>
+
+<h3>/cost - コスト確認</h3>
+<p>現在のセッションでのトークン使用量と推定コストを確認できます。</p>
+
+<div class="terminal">
+<div class="terminal-header">
+  <span class="terminal-dot red"></span>
+  <span class="terminal-dot yellow"></span>
+  <span class="terminal-dot green"></span>
+  <span class="terminal-title">Terminal</span>
+</div>
+<pre><span class="prompt">></span> /cost
+
+<span class="output">Session cost: $0.42
+  Input tokens:  125,000
+  Output tokens: 15,000</span></pre>
+</div>
+
+<div class="info-box tip">
+<div class="info-box-title">ヒント</div>
+<p>コストを抑えるには：(1) 必要なファイルだけを指定する (2) /compact でコンテキストを定期的に圧縮する (3) 新しいタスクでは /clear する。</p>
+</div>
+    `,
+    exercise: {
+      title: "🔧 ハンズオン: スラッシュコマンドの実践",
+      steps: [
+        "Claude Code で何か会話をした後、<code class='code-inline'>/cost</code> でトークン使用量を確認する",
+        "<code class='code-inline'>/compact</code> を実行してコンテキストが圧縮されることを確認する",
+        "再度 <code class='code-inline'>/cost</code> で使用量の変化を確認する",
+        "<code class='code-inline'>/clear</code> で会話をリセットして新しいタスクを始める"
+      ]
+    },
+    checklist: [
+      "主要なスラッシュコマンドの種類と用途を理解した",
+      "/compact と /clear の使い分けができる",
+      "/cost でトークン使用量を確認できた"
+    ]
+  },
+  {
+    id: 9, level: 3, levelName: "応用編",
+    title: "設定とカスタマイズ",
+    badge: "advanced", badgeLabel: "上級",
+    readTime: "14分",
+    objectives: [
+      "Claude Code の設定ファイルの構造を理解する",
+      "権限モードの設定を適切に行える",
+      "カスタムキーバインドを設定できる"
+    ],
+    content: `
+<h2>設定ファイル</h2>
+<p>Claude Code の設定は <span class="code-inline">~/.claude/settings.json</span> に保存されます。プロジェクトごとの設定は <span class="code-inline">.claude/settings.json</span> に配置します。</p>
+
+<div class="code-block">
+<div class="code-header"><span>settings.json の例</span><button class="code-copy" onclick="copyCode(this)">コピー</button></div>
+<pre><code>{
+  "permissions": {
+    "allow": [
+      "Bash(npm test)",
+      "Bash(npm run lint)",
+      "Bash(npm run build)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force)"
+    ]
+  },
+  "env": {
+    "CLAUDE_MODEL": "sonnet"
+  }
+}</code></pre>
+</div>
+
+<h2>権限設定</h2>
+<p>特定のコマンドを事前に許可・拒否できます。よく使うコマンドを <span class="code-inline">allow</span> に追加しておくと、毎回承認する手間が省けます。</p>
+
+<h3>権限の種類</h3>
+<table>
+  <tr><th>権限</th><th>対象</th><th>例</th></tr>
+  <tr><td><span class="code-inline">Bash(command)</span></td><td>特定のコマンド</td><td><span class="code-inline">Bash(npm test)</span></td></tr>
+  <tr><td><span class="code-inline">Read</span></td><td>ファイル読み込み</td><td>全ファイルの読み込み許可</td></tr>
+  <tr><td><span class="code-inline">Edit</span></td><td>ファイル編集</td><td>ファイル編集の許可</td></tr>
+  <tr><td><span class="code-inline">Write</span></td><td>ファイル書き込み</td><td>新規ファイル作成の許可</td></tr>
+</table>
+
+<h2>キーバインド</h2>
+<p>Claude Code のキーバインドはカスタマイズ可能です。<span class="code-inline">~/.claude/keybindings.json</span> で設定します。</p>
+
+<div class="code-block">
+<div class="code-header"><span>デフォルトのキーバインド</span></div>
+<pre><code>Enter          - 入力の送信（改行は Shift+Enter）
+Ctrl+C         - 現在の操作をキャンセル / 終了
+Ctrl+L         - 画面クリア
+Escape         - 入力のキャンセル
+Tab            - オートコンプリート</code></pre>
+</div>
+
+<h2>モデルの選択</h2>
+<p>使用するモデルを環境変数やフラグで指定できます。</p>
+
+<div class="terminal">
+<div class="terminal-header">
+  <span class="terminal-dot red"></span>
+  <span class="terminal-dot yellow"></span>
+  <span class="terminal-dot green"></span>
+  <span class="terminal-title">Terminal</span>
+</div>
+<pre><span class="comment"># コマンドラインフラグで指定</span>
+<span class="prompt">$</span> claude --model sonnet
+
+<span class="comment"># 環境変数で指定</span>
+<span class="prompt">$</span> export CLAUDE_MODEL=sonnet
+<span class="prompt">$</span> claude</pre>
+</div>
+
+<div class="info-box tip">
+<div class="info-box-title">ヒント</div>
+<p>Sonnet はコスト効率が良く、日常的なタスクに向いています。Opus はより高品質な出力が必要なときに使いましょう。</p>
+</div>
+    `,
+    exercise: {
+      title: "🔧 ハンズオン: 設定のカスタマイズ",
+      steps: [
+        "<code class='code-inline'>~/.claude/settings.json</code> を確認する（なければ作成）",
+        "よく使うコマンド（例：npm test）を allow リストに追加する",
+        "プロジェクトに <code class='code-inline'>.claude/settings.json</code> を作成して権限を設定する",
+        "設定変更後に Claude Code を再起動して反映を確認する"
+      ]
+    },
+    checklist: [
+      "settings.json の構造を理解した",
+      "権限設定で特定コマンドを事前に許可する方法を習得した",
+      "モデル選択の方法を理解した"
+    ]
+  },
+
+  // ===== Level 4: 上級編 =====
+  {
+    id: 10, level: 4, levelName: "上級編",
+    title: "MCP サーバー",
+    badge: "expert", badgeLabel: "エキスパート",
+    readTime: "20分",
+    objectives: [
+      "MCP（Model Context Protocol）の概念を理解する",
+      "MCP サーバーの設定方法を習得する",
+      "外部ツールとの連携を実装できる"
+    ],
+    content: `
+<h2>MCP とは</h2>
+<p><strong>MCP（Model Context Protocol）</strong> は、Claude Code に外部ツールやデータソースを接続するためのプロトコルです。MCP サーバーを設定することで、Claude Code の機能を大幅に拡張できます。</p>
+
+<h3>MCP でできること</h3>
+<ul>
+  <li>データベースへの直接クエリ</li>
+  <li>外部 API との連携（Slack、Jira、Linear など）</li>
+  <li>カスタムツールの追加</li>
+  <li>ドキュメント検索エンジンの統合</li>
+</ul>
+
+<h2>MCP サーバーの設定</h2>
+<p>MCP サーバーは <span class="code-inline">~/.claude/settings.json</span> または <span class="code-inline">.claude/settings.json</span> で設定します。</p>
+
+<div class="code-block">
+<div class="code-header"><span>MCP サーバー設定例</span><button class="code-copy" onclick="copyCode(this)">コピー</button></div>
+<pre><code>{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-postgres",
+        "postgresql://localhost:5432/mydb"
+      ]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-filesystem",
+        "/path/to/allowed/directory"
+      ]
+    }
+  }
+}</code></pre>
+</div>
+
+<h2>利用可能な MCP サーバー</h2>
+<table>
+  <tr><th>サーバー</th><th>用途</th></tr>
+  <tr><td><span class="code-inline">server-postgres</span></td><td>PostgreSQL データベース接続</td></tr>
+  <tr><td><span class="code-inline">server-filesystem</span></td><td>ファイルシステムアクセス（制限付き）</td></tr>
+  <tr><td><span class="code-inline">server-github</span></td><td>GitHub API 連携</td></tr>
+  <tr><td><span class="code-inline">server-slack</span></td><td>Slack メッセージング</td></tr>
+  <tr><td><span class="code-inline">server-puppeteer</span></td><td>ブラウザ自動操作</td></tr>
+</table>
+
+<h2>MCP サーバーの使い方</h2>
+<p>MCP サーバーを設定後、Claude Code は自動的に新しいツールを認識します。</p>
+
+<div class="code-block">
+<div class="code-header"><span>MCP ツール使用例</span></div>
+<pre><code><span style="color:var(--accent)">></span> users テーブルから最近登録した10ユーザーを表示して
+
+<span style="color:var(--text-muted)">[Claude が postgres MCP サーバー経由で SQL を実行]</span>
+
+<span style="color:var(--accent)">></span> Slack の #dev チャンネルにデプロイ完了を通知して
+
+<span style="color:var(--text-muted)">[Claude が slack MCP サーバー経由でメッセージを送信]</span></code></pre>
+</div>
+
+<div class="info-box warning">
+<div class="info-box-title">セキュリティ注意</div>
+<p>MCP サーバーは強力なアクセス権限を持つため、信頼できるサーバーのみを設定してください。特にデータベース接続は読み取り専用ユーザーを使用することを推奨します。</p>
+</div>
+
+<div class="info-box tip">
+<div class="info-box-title">ヒント</div>
+<p>MCP サーバーの設定後、<span class="code-inline">/help</span> コマンドで利用可能なツールの一覧を確認できます。新しいツールが追加されていることが確認できるはずです。</p>
+</div>
+    `,
+    exercise: {
+      title: "🔧 ハンズオン: MCP サーバーの設定",
+      steps: [
+        "<code class='code-inline'>~/.claude/settings.json</code> に filesystem MCP サーバーを追加する",
+        "Claude Code を再起動して、MCP ツールが認識されていることを確認する",
+        "追加されたツールを使ってファイル操作を試みる",
+        "（オプション）PostgreSQL MCP サーバーを設定してデータベースクエリを試す"
+      ]
+    },
+    checklist: [
+      "MCP の概念と仕組みを理解した",
+      "MCP サーバーの設定方法を習得した",
+      "MCP 経由でのツール使用を確認した"
+    ]
+  },
+  {
+    id: 11, level: 4, levelName: "上級編",
+    title: "Hooks",
+    badge: "expert", badgeLabel: "エキスパート",
+    readTime: "16分",
+    objectives: [
+      "Hooks の仕組みと種類を理解する",
+      "カスタムフックを設定できる",
+      "フックを使ったワークフロー自動化を実装できる"
+    ],
+    content: `
+<h2>Hooks とは</h2>
+<p><strong>Hooks</strong> は Claude Code のイベントに応じて自動的にシェルコマンドを実行する仕組みです。ツールの実行前後にカスタム処理を挟むことで、ワークフローを自動化できます。</p>
+
+<h2>Hook の種類</h2>
+<table>
+  <tr><th>Hook</th><th>タイミング</th><th>用途</th></tr>
+  <tr><td><span class="code-inline">PreToolUse</span></td><td>ツール実行前</td><td>バリデーション、ブロック</td></tr>
+  <tr><td><span class="code-inline">PostToolUse</span></td><td>ツール実行後</td><td>ログ記録、通知</td></tr>
+  <tr><td><span class="code-inline">Notification</span></td><td>通知時</td><td>外部通知連携</td></tr>
+  <tr><td><span class="code-inline">Stop</span></td><td>応答完了時</td><td>後処理の自動実行</td></tr>
+</table>
+
+<h2>Hook の設定</h2>
+<p>Hooks は <span class="code-inline">settings.json</span> の <span class="code-inline">hooks</span> セクションに設定します。</p>
+
+<div class="code-block">
+<div class="code-header"><span>Hook 設定例</span><button class="code-copy" onclick="copyCode(this)">コピー</button></div>
+<pre><code>{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \\"Executing: $TOOL_INPUT\\" >> ~/.claude/tool.log"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx prettier --write \\"$FILE_PATH\\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \\"$NOTIFICATION_MESSAGE\\" with title \\"Claude Code\\"'"
+          }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+</div>
+
+<h2>実用的な Hook の例</h2>
+
+<h3>ファイル保存時に自動フォーマット</h3>
+<p>Write や Edit ツールでファイルが変更された後に、自動的に Prettier を実行する例です。</p>
+
+<div class="code-block">
+<div class="code-header"><span>自動フォーマット Hook</span></div>
+<pre><code>{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx prettier --write \\"$FILE_PATH\\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+</div>
+
+<h3>危険なコマンドのブロック</h3>
+<p>PreToolUse で特定のコマンドをブロックできます。</p>
+
+<div class="code-block">
+<div class="code-header"><span>コマンドブロック Hook</span></div>
+<pre><code>{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \\"$TOOL_INPUT\\" | grep -qE 'rm -rf|drop table|truncate'; then echo 'BLOCKED: Dangerous command detected' >&2; exit 2; fi"
+          }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+</div>
+
+<div class="info-box tip">
+<div class="info-box-title">ヒント</div>
+<p>Hook の終了コード <span class="code-inline">2</span> はツールの実行をブロックします。終了コード <span class="code-inline">0</span> は正常、それ以外はエラーとして扱われます。</p>
+</div>
+    `,
+    exercise: {
+      title: "🔧 ハンズオン: Hook の設定",
+      steps: [
+        "settings.json に PostToolUse の Hook を追加して、ファイル変更後に自動フォーマットされるようにする",
+        "Notification Hook を設定して、Claude Code の通知をシステム通知として受け取れるようにする",
+        "PreToolUse Hook で危険コマンドのブロックを設定する",
+        "各 Hook が正常に動作することを確認する"
+      ]
+    },
+    checklist: [
+      "Hooks の種類（Pre/Post/Notification/Stop）を理解した",
+      "カスタムフックの設定方法を習得した",
+      "実用的なフック（自動フォーマット、コマンドブロック）を設定できた"
+    ]
+  },
+  {
+    id: 12, level: 4, levelName: "上級編",
+    title: "高度なワークフロー",
+    badge: "expert", badgeLabel: "エキスパート",
+    readTime: "22分",
+    objectives: [
+      "Plan モードを効果的に活用できる",
+      "マルチエージェントの仕組みを理解する",
+      "メモリ機能を活用した効率的な開発を行える"
+    ],
+    content: `
+<h2>Plan モード</h2>
+<p>複雑なタスクに取り組む前に、Claude Code に実装計画を立てさせることができます。Plan モードでは、コードの変更を行わずに設計のみを行います。</p>
+
+<div class="code-block">
+<div class="code-header"><span>Plan モードの使い方</span></div>
+<pre><code><span style="color:var(--accent)">></span> 認証システムをセッションベースから JWT に移行したい。
+  まず計画を立てて。
+
+<span style="color:var(--text-muted)">[Claude がコードベースを分析し、移行計画を立てる]
+- 影響範囲の分析
+- 必要な変更の一覧
+- 移行手順の提案
+- リスクと対策</span>
+
+<span style="color:var(--accent)">></span> その計画で進めて</code></pre>
+</div>
+
+<div class="info-box info">
+<div class="info-box-title">Plan モードの自動検出</div>
+<p>Claude Code は複雑なタスクを検出すると、自動的に Plan モードを提案することがあります。「まず計画を立てましょうか？」と聞かれたら、承認すると Plan モードに入ります。</p>
+</div>
+
+<h2>マルチエージェント</h2>
+<p>Claude Code は内部的にサブエージェント（Task ツール）を使い、複数の作業を並行して進めることができます。</p>
+
+<h3>サブエージェントの種類</h3>
+<table>
+  <tr><th>エージェント</th><th>用途</th></tr>
+  <tr><td><strong>Explore</strong></td><td>コードベースの調査・分析</td></tr>
+  <tr><td><strong>Bash</strong></td><td>コマンド実行</td></tr>
+  <tr><td><strong>Plan</strong></td><td>実装計画の策定</td></tr>
+  <tr><td><strong>general-purpose</strong></td><td>汎用的なタスク処理</td></tr>
+</table>
+
+<p>マルチエージェントは自動的に活用されますが、明示的に依頼することもできます。</p>
+
+<div class="code-block">
+<div class="code-header"><span>並行処理の例</span></div>
+<pre><code>> 以下の3つを並行して調べて：
+  1. テストのカバレッジ状況
+  2. 未使用の依存パッケージ
+  3. セキュリティ脆弱性のあるパッケージ</code></pre>
+</div>
+
+<h2>メモリの活用</h2>
+<p>Claude Code には自動メモリ機能があり、セッション間で学習した内容を保持できます。</p>
+
+<h3>メモリの場所</h3>
+<div class="code-block">
+<div class="code-header"><span>メモリファイル</span></div>
+<pre><code>~/.claude/
+  projects/
+    {project-hash}/
+      memory/
+        MEMORY.md          # メインメモリ（自動読み込み）
+        debugging.md       # トピック別メモリ
+        patterns.md</code></pre>
+</div>
+
+<h3>メモリに記録される内容</h3>
+<ul>
+  <li>プロジェクト固有のパターンや慣例</li>
+  <li>過去のデバッグで得た知見</li>
+  <li>よく使う操作手順</li>
+  <li>エラーの解決方法</li>
+</ul>
+
+<h2>高度なワークフロー例</h2>
+
+<h3>TDD（テスト駆動開発）ワークフロー</h3>
+<div class="code-block">
+<div class="code-header"><span>TDD ワークフロー</span></div>
+<pre><code><span style="color:var(--accent)">></span> UserService に deleteUser メソッドを TDD で実装して。
+  1. まずテストを書く
+  2. テストが失敗することを確認
+  3. 最小限の実装でテストを通す
+  4. リファクタリング</code></pre>
+</div>
+
+<h3>バグ調査ワークフロー</h3>
+<div class="code-block">
+<div class="code-header"><span>バグ調査ワークフロー</span></div>
+<pre><code><span style="color:var(--accent)">></span> ユーザーからの報告: ログイン後にダッシュボードが表示されない。
+  1. 関連するコードを探して
+  2. 原因を特定して
+  3. 修正して
+  4. テストを追加して
+  5. 修正が正しいことを確認して</code></pre>
+</div>
+
+<div class="info-box tip">
+<div class="info-box-title">ヒント</div>
+<p>複雑なタスクは番号付きの手順に分解して依頼すると、Claude Code がステップバイステップで確実に処理してくれます。</p>
+</div>
+
+<h2>まとめ</h2>
+<p>これで Claude Code マスターチュートリアルのすべてのチャプターを完了しました！以下のスキルを身につけたことになります：</p>
+<ul>
+  <li>基本操作からファイル探索まで</li>
+  <li>コード編集、テスト実行、Git 操作</li>
+  <li>CLAUDE.md、スラッシュコマンド、設定のカスタマイズ</li>
+  <li>MCP サーバー、Hooks、高度なワークフロー</li>
+</ul>
+<p>Claude Code を活用して、より効率的で楽しい開発ライフを送りましょう！</p>
+    `,
+    exercise: {
+      title: "🔧 ハンズオン: 高度なワークフローの実践",
+      steps: [
+        "複雑なタスク（例：新機能追加）について、まず計画を立てるよう Claude Code に依頼する",
+        "計画を確認し、承認して実行に移す",
+        "バグ報告のシナリオを作り、調査から修正までの一連の流れを Claude Code で行う",
+        "メモリファイル（<code class='code-inline'>~/.claude/projects/*/memory/MEMORY.md</code>）の内容を確認する"
+      ]
+    },
+    checklist: [
+      "Plan モードを使って複雑なタスクの計画を立てられた",
+      "マルチエージェントの仕組みを理解した",
+      "メモリ機能の活用方法を理解した"
+    ]
+  }
+];
+
+// ===== State Management =====
+const STORAGE_KEY = "claude-code-tutorial-progress";
+
+function getProgress() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  } catch { return {}; }
+}
+function saveProgress(progress) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+function isChapterCompleted(id) {
+  return !!getProgress()[id];
+}
+function completeChapter(id) {
+  const p = getProgress();
+  p[id] = true;
+  saveProgress(p);
+}
+function uncompleteChapter(id) {
+  const p = getProgress();
+  delete p[id];
+  saveProgress(p);
+}
+function getCompletedCount() {
+  return Object.keys(getProgress()).length;
+}
+
+// ===== Sidebar =====
+function renderSidebar() {
+  const sidebar = document.getElementById("sidebar");
+  let html = "";
+  let currentLevel = 0;
+  const levelColors = { 1: "level-1", 2: "level-2", 3: "level-3", 4: "level-4" };
+  const levelNames = { 1: "Level 1: 基礎編", 2: "Level 2: 実践編", 3: "Level 3: 応用編", 4: "Level 4: 上級編" };
+
+  chapters.forEach(ch => {
+    if (ch.level !== currentLevel) {
+      currentLevel = ch.level;
+      html += `<div class="level-group"><div class="level-label ${levelColors[ch.level]}">${levelNames[ch.level]}</div>`;
+    }
+    const completed = isChapterCompleted(ch.id);
+    const statusClass = completed ? "completed" : "pending";
+    const statusIcon = completed ? "✓" : "";
+    html += `
+      <div class="nav-item" data-id="${ch.id}" onclick="goToChapter(${ch.id})">
+        <span class="status-icon ${statusClass}">${statusIcon}</span>
+        <span class="chapter-num">${ch.id}.</span>
+        <span>${ch.title}</span>
+      </div>`;
+    if (ch.id === 3 || ch.id === 6 || ch.id === 9 || ch.id === 12) html += `</div>`;
+  });
+
+  sidebar.innerHTML = html;
+}
+
+// ===== Main Content =====
+function renderChapter(ch) {
+  const completed = isChapterCompleted(ch.id);
+  let exerciseSteps = ch.exercise.steps.map((s, i) => `<li>${s}</li>`).join("");
+  let checklistItems = ch.checklist.map((c, i) =>
+    `<label><input type="checkbox" data-chapter="${ch.id}" data-idx="${i}"> ${c}</label>`
+  ).join("");
+
+  return `
+<div class="chapter" id="chapter-${ch.id}" data-id="${ch.id}">
+  <h1>${ch.title}</h1>
+  <div class="chapter-meta">
+    <span class="badge badge-${ch.badge}">${ch.badgeLabel}</span>
+    <span>📖 ${ch.readTime}</span>
+    <span>Chapter ${ch.id} / 12</span>
+  </div>
+
+  <div class="objectives">
+    <div class="objectives-title">学習目標</div>
+    <ul>${ch.objectives.map(o => `<li>${o}</li>`).join("")}</ul>
+  </div>
+
+  ${ch.content}
+
+  <div class="exercise">
+    <div class="exercise-title">${ch.exercise.title}</div>
+    <ol>${exerciseSteps}</ol>
+  </div>
+
+  <div class="checklist">
+    <div class="checklist-title">✅ 理解度チェック</div>
+    ${checklistItems}
+  </div>
+
+  <div class="complete-section">
+    <button class="btn-complete ${completed ? 'completed' : ''}" id="btn-complete-${ch.id}" onclick="toggleComplete(${ch.id})">
+      ${completed ? '✓ クリア済み' : 'この章をクリアする'}
+    </button>
+    ${ch.id < 12 ? `<button class="btn-next" onclick="goToChapter(${ch.id + 1})">次の章へ →</button>` : ''}
+  </div>
+
+  <div class="chapter-nav">
+    <button ${ch.id === 1 ? 'disabled' : ''} onclick="goToChapter(${ch.id - 1})">← 前の章</button>
+    <button ${ch.id === 12 ? 'disabled' : ''} onclick="goToChapter(${ch.id + 1})">次の章 →</button>
+  </div>
+</div>`;
+}
+
+function renderAllChapters() {
+  const main = document.getElementById("mainContent");
+  main.innerHTML = chapters.map(ch => renderChapter(ch)).join("");
+}
+
+// ===== Navigation =====
+let currentChapterId = 1;
+
+function goToChapter(id) {
+  document.querySelectorAll(".chapter").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+  const chEl = document.getElementById(`chapter-${id}`);
+  if (chEl) {
+    chEl.classList.add("active");
+    currentChapterId = id;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  const navEl = document.querySelector(`.nav-item[data-id="${id}"]`);
+  if (navEl) navEl.classList.add("active");
+  // Close sidebar on mobile
+  closeSidebar();
+}
+
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("sidebarOverlay").classList.toggle("open");
+}
+function closeSidebar() {
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sidebarOverlay").classList.remove("open");
+}
+
+// ===== Progress =====
+function updateProgressUI() {
+  const count = getCompletedCount();
+  const pct = Math.round((count / 12) * 100);
+  document.getElementById("progressFill").style.width = pct + "%";
+  document.getElementById("progressText").textContent = `${count} / 12 完了`;
+}
+
+function toggleComplete(id) {
+  if (isChapterCompleted(id)) {
+    uncompleteChapter(id);
+  } else {
+    completeChapter(id);
+  }
+  const btn = document.getElementById(`btn-complete-${id}`);
+  const completed = isChapterCompleted(id);
+  btn.className = `btn-complete ${completed ? 'completed' : ''}`;
+  btn.textContent = completed ? '✓ クリア済み' : 'この章をクリアする';
+  renderSidebar();
+  updateProgressUI();
+  // Re-activate current nav item
+  const navEl = document.querySelector(`.nav-item[data-id="${currentChapterId}"]`);
+  if (navEl) navEl.classList.add("active");
+}
+
+// ===== Copy Code =====
+function copyCode(btn) {
+  const pre = btn.closest(".code-block").querySelector("pre");
+  const text = pre.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = "コピー済み!";
+    setTimeout(() => { btn.textContent = "コピー"; }, 1500);
+  });
+}
+
+// ===== Init =====
+function init() {
+  renderSidebar();
+  renderAllChapters();
+  updateProgressUI();
+  goToChapter(1);
+}
+
+init();
+</script>
+</body>
+</html>
